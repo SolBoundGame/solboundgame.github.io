@@ -22,8 +22,22 @@
     <!-- Non-blocking font load so the loader paints immediately on slow connections -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Spectral:ital,wght@0,400;1,400&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Spectral:ital,wght@0,400;1,400&display=swap"></noscript>
-    <!-- Start the 3D model download in parallel with the JS bundle -->
-    <link rel="preload" href="/models/planet.glb" as="fetch" type="model/gltf-binary" crossorigin>
+    <!-- Start the 3D model download in parallel with the JS bundle, unless the
+         visitor picked the lite page (same rules as src/components/viewMode.ts) -->
+    <script>
+      (function () {
+        var lite = false;
+        try {
+          var q = new URLSearchParams(location.search);
+          lite = q.has("static") || (!q.has("3d") && localStorage.getItem("solbound-mode") === "static");
+        } catch (e) {}
+        if (lite) return;
+        var l = document.createElement("link");
+        l.rel = "preload"; l.href = "/models/planet.glb"; l.as = "fetch";
+        l.type = "model/gltf-binary"; l.crossOrigin = "anonymous";
+        document.head.appendChild(l);
+      })();
+    </script>
     <link rel="icon" type="image/png" sizes="16x16" href="/icon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/icon-32x32.png">
     <link rel="icon" type="image/png" sizes="48x48" href="/icon-48x48.png">
@@ -97,21 +111,22 @@
         position: absolute; bottom: 8vh; left: 50%; transform: translateX(-50%);
         width: 90vw; margin: 0; text-align: center;
         font-family: "Spectral", Georgia, serif; font-style: italic; font-size: 0.95rem;
-        color: #7d8391; opacity: 0;
-        animation: ld-fade-in 800ms ease 9s forwards; /* only appears if loading drags on */
+        color: #7d8391; opacity: 0; visibility: hidden; /* not clickable until shown */
+        animation: ld-fade-in 800ms ease 5s forwards; /* only appears if loading drags on */
       }
+      #loader .ld-slow a { color: #ffb347; text-decoration: underline; text-underline-offset: 3px; }
       @keyframes ld-spin { to { transform: rotate(360deg); } }
       @keyframes ld-pulse { 50% { box-shadow: 0 0 0 2px #ffb347, 0 0 18px 6px rgba(255, 150, 60, 0.85), 0 0 60px 18px rgba(255, 110, 30, 0.4); } }
       @keyframes ld-indeterminate { 0% { left: -35%; } 100% { left: 100%; } }
-      @keyframes ld-fade-in { to { opacity: 1; } }
+      @keyframes ld-fade-in { to { opacity: 1; visibility: visible; } }
       @media (prefers-reduced-motion: reduce) {
         #loader.is-done > *, #loader.is-done .ld-eclipse { transform: none; filter: none; }
         #loader .ld-eclipse, #loader .ld-eclipse::after { animation: none; }
         #loader .ld-bar::before { animation: none; left: 0; width: 100%; opacity: 0.5; }
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-D5MeKZCo.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CHr6RMP0.css">
+    <script type="module" crossorigin src="/assets/index-CJpVqpNF.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CRojPmsY.css">
   </head>
   <body>
     <div id="loader" role="status" aria-live="polite" aria-busy="true" aria-label="Loading SolBound">
@@ -121,7 +136,7 @@
         <div class="ld-bar" aria-hidden="true"></div>
         <p class="ld-label">Loading<span class="ld-pct" data-loader-pct></span></p>
       </div>
-      <p class="ld-slow">Slow connection? Hang tight. The planet is on its way.</p>
+      <p class="ld-slow">Taking a while? The planet is on its way, or <a href="/?static">view the lite version</a>.</p>
     </div>
     <noscript>
       <style>#loader { display: none; }</style>
