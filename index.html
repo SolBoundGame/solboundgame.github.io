@@ -2,18 +2,131 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="A next-gen 4X strategy game. Fight for the sunlight on a planet of shifting climates and strategy. Coming soon.">
+    <meta name="description" content="SolBound is a turn-based 4X strategy game where energy is everything. Bound inside a three-body system, fight to survive and escape. Coming Q1 2028 from Hulder Games.">
+    <meta name="theme-color" content="#0f131a">
+    <!-- Link previews (Discord, X, iMessage, Slack...). Assumes the page is served at solbound.net -->
+    <link rel="canonical" href="https://solbound.net/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SolBound">
+    <meta property="og:url" content="https://solbound.net/">
+    <meta property="og:title" content="SolBound: turn-based 4X strategy by Hulder Games">
+    <meta property="og:description" content="Bound inside a three-body system, fight to survive and escape. A turn-based 4X strategy game where energy is everything. Coming Q1 2028.">
+    <meta property="og:image" content="https://solbound.net/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="A glowing solar eclipse above the SolBound logo">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://solbound.net/og-image.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Non-blocking font load so the loader paints immediately on slow connections -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Spectral:ital,wght@0,400;1,400&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Spectral:ital,wght@0,400;1,400&display=swap"></noscript>
+    <!-- Start the 3D model download in parallel with the JS bundle -->
+    <link rel="preload" href="/models/planet.glb" as="fetch" type="model/gltf-binary" crossorigin>
     <link rel="icon" type="image/png" sizes="16x16" href="/icon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/icon-32x32.png">
     <link rel="icon" type="image/png" sizes="48x48" href="/icon-48x48.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SolBound</title>
-    <script type="module" crossorigin src="/assets/index-DhlRrLQL.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-tvPJI7ol.css">
+    <title>SolBound — Turn-based 4X strategy by Hulder Games</title>
+    <style>
+      /* Loading screen: inline so it paints before any JS/CSS bundle arrives */
+      html, body { margin: 0; background: #0c0f16; }
+      #loader {
+        --ember: oklch(0.72 0.17 50);
+        --progress: 0%;
+        position: fixed; inset: 0; z-index: 100;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 2.2rem;
+        background: radial-gradient(ellipse at center, #141925 0%, #07090e 100%);
+        color: #efebe4;
+        font-family: "Cinzel", "Times New Roman", serif;
+        transition: opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1) 250ms;
+      }
+      /* Hand-off, step 1: loader contents drift up and dissolve */
+      #loader > * { transition: opacity 450ms ease, transform 600ms cubic-bezier(0.4, 0, 0.2, 1), filter 450ms ease; }
+      #loader.is-done > * { opacity: 0; transform: translateY(-10px); filter: blur(4px); }
+      /* The eclipse swells into the scene instead of just vanishing */
+      #loader.is-done .ld-eclipse { transform: scale(2.4); filter: blur(10px); transition-duration: 700ms; }
+      /* Step 2: the backdrop dissolves into the planet */
+      #loader.is-done { opacity: 0; pointer-events: none; }
+      #loader .ld-eclipse {
+        position: relative; width: 88px; height: 88px; border-radius: 50%;
+        background: #07090e;
+        box-shadow:
+          0 0 0 2px #ff9a3c,
+          0 0 14px 4px rgba(255, 140, 50, 0.75),
+          0 0 46px 12px rgba(255, 110, 30, 0.35);
+        animation: ld-pulse 2.4s ease-in-out infinite;
+      }
+      #loader .ld-eclipse::after {
+        /* thin bright arc that orbits the rim */
+        content: ""; position: absolute; inset: -4px; border-radius: 50%;
+        border: 2px solid transparent; border-top-color: #ffe2a8;
+        filter: blur(0.6px);
+        animation: ld-spin 1.6s linear infinite;
+      }
+      #loader .ld-title {
+        margin: 0; font-weight: 400; font-size: 1.5rem;
+        letter-spacing: 0.4em; margin-right: -0.4em;
+      }
+      #loader .ld-title span { color: #ffb347; }
+      #loader .ld-status { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
+      #loader .ld-bar {
+        position: relative; width: min(240px, 60vw); height: 2px; overflow: hidden;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      #loader .ld-bar::before {
+        content: ""; position: absolute; top: 0; bottom: 0; left: 0;
+        width: 35%; background: var(--ember);
+        box-shadow: 0 0 10px var(--ember);
+        animation: ld-indeterminate 1.4s ease-in-out infinite;
+      }
+      #loader.is-determinate .ld-bar::before {
+        width: var(--progress); animation: none; transition: width 300ms ease;
+      }
+      #loader .ld-label {
+        margin: 0; font-size: 0.68rem; letter-spacing: 0.4em; margin-right: -0.4em;
+        color: #9aa0ad; text-transform: uppercase;
+      }
+      #loader .ld-pct { color: var(--ember); margin-left: 0.6em; }
+      #loader .ld-slow {
+        position: absolute; bottom: 8vh; left: 50%; transform: translateX(-50%);
+        width: 90vw; margin: 0; text-align: center;
+        font-family: "Spectral", Georgia, serif; font-style: italic; font-size: 0.95rem;
+        color: #7d8391; opacity: 0;
+        animation: ld-fade-in 800ms ease 9s forwards; /* only appears if loading drags on */
+      }
+      @keyframes ld-spin { to { transform: rotate(360deg); } }
+      @keyframes ld-pulse { 50% { box-shadow: 0 0 0 2px #ffb347, 0 0 18px 6px rgba(255, 150, 60, 0.85), 0 0 60px 18px rgba(255, 110, 30, 0.4); } }
+      @keyframes ld-indeterminate { 0% { left: -35%; } 100% { left: 100%; } }
+      @keyframes ld-fade-in { to { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) {
+        #loader.is-done > *, #loader.is-done .ld-eclipse { transform: none; filter: none; }
+        #loader .ld-eclipse, #loader .ld-eclipse::after { animation: none; }
+        #loader .ld-bar::before { animation: none; left: 0; width: 100%; opacity: 0.5; }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-CUTykSQ8.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DqIML4uJ.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="loader" role="status" aria-live="polite" aria-busy="true" aria-label="Loading SolBound">
+      <div class="ld-eclipse" aria-hidden="true"></div>
+      <p class="ld-title" aria-hidden="true"><span>SOL</span>BOUND</p>
+      <div class="ld-status">
+        <div class="ld-bar" aria-hidden="true"></div>
+        <p class="ld-label">Loading<span class="ld-pct" data-loader-pct></span></p>
+      </div>
+      <p class="ld-slow">Slow connection? Hang tight. The planet is on its way.</p>
+    </div>
+    <noscript>
+      <style>#loader { display: none; }</style>
+      <p style="color:#efebe4;text-align:center;padding:2rem;font-family:serif">SolBound needs JavaScript to show the 3D planet.</p>
+    </noscript>
+    <div id="root"></div>
   </body>
 </html>
